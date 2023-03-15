@@ -16,7 +16,7 @@ void task_default_init(void)
 
 void task_default_run(void)
 {
-//	printf("%s : %lu \n\r", __func__, xTaskGetTickCount() );
+	printf("%s : %lu \n\r", __func__, xTaskGetTickCount() );
 	analog_capture_run();
 //	DBG("ADC: %lu", analog_capture_Get_avg());
 
