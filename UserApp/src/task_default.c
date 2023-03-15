@@ -18,5 +18,10 @@ void task_default_run(void)
 {
 //	printf("%s : %lu \n\r", __func__, xTaskGetTickCount() );
 	analog_capture_run();
-	DBG("ADC: %lu", analog_capture_Get_avg());
+//	DBG("ADC: %lu", analog_capture_Get_avg());
+
+	if(analog_capture_Get_avg() < 1024)
+	{
+		DBG("ADC is at %lu : system should go into standby mode", analog_capture_Get_avg());
+	}
 }
