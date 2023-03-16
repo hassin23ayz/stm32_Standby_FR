@@ -31,7 +31,9 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <stdbool.h>
+#define RxBuf_SIZE   64
+#define MainBuf_SIZE 128
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -60,6 +62,11 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN Private defines */
 extern ADC_HandleTypeDef hadc1;
+
+extern uint8_t MainBuf[MainBuf_SIZE];
+extern bool uart1RcvComplete;
+
+
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

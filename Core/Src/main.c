@@ -1,5 +1,7 @@
 /* USER CODE BEGIN Header */
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include "analog_capture.h"
 #include "task_default.h"
 /**
@@ -46,6 +48,9 @@
 ADC_HandleTypeDef hadc1;
 DMA_HandleTypeDef hdma_adc1;
 
+UART_HandleTypeDef huart1;
+DMA_HandleTypeDef hdma_usart1_rx;
+
 osThreadId defaultTaskHandle;
 /* USER CODE BEGIN PV */
 
@@ -56,6 +61,7 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_ADC1_Init(void);
+static void MX_USART1_UART_Init(void);
 void StartDefaultTask(void const * argument);
 
 /* USER CODE BEGIN PFP */
@@ -64,7 +70,48 @@ void StartDefaultTask(void const * argument);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+uint8_t RxBuf[RxBuf_SIZE];
+uint8_t MainBuf[MainBuf_SIZE];
+bool uart1RcvComplete = false;
 
+uint16_t oldPos = 0;
+uint16_t newPos = 0;
+
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
+{
+	if (huart->Instance == USART1)
+	{
+		oldPos = newPos;  // Update the last position before copying new data
+
+		/* If the data in large and it is about to exceed the buffer size, we have to route it to the start of the buffer
+		 * This is to maintain the circular buffer
+		 * The old data in the main buffer will be overlapped
+		 */
+		if (oldPos+Size > MainBuf_SIZE)  // If the current position + new data size is greater than the main buffer
+		{
+			uint16_t datatocopy = MainBuf_SIZE-oldPos;  // find out how much space is left in the main buffer
+			memcpy ((uint8_t *)MainBuf+oldPos, RxBuf, datatocopy);  // copy data in that remaining space
+
+			oldPos = 0;  // point to the start of the buffer
+			memcpy ((uint8_t *)MainBuf, (uint8_t *)RxBuf+datatocopy, (Size-datatocopy));  // copy the remaining data
+			newPos = (Size-datatocopy);  // update the position
+		}
+
+		/* if the current position + new data size is less than the main buffer
+		 * we will simply copy the data into the buffer and update the position
+		 */
+		else
+		{
+			memcpy ((uint8_t *)MainBuf+oldPos, RxBuf, Size);
+			newPos = Size+oldPos;
+		}
+
+		uart1RcvComplete = true;
+		/* start the DMA again */
+		HAL_UARTEx_ReceiveToIdle_DMA(&huart1, (uint8_t *) RxBuf, RxBuf_SIZE);
+		__HAL_DMA_DISABLE_IT(&hdma_usart1_rx, DMA_IT_HT);
+	}
+}
 /* USER CODE END 0 */
 
 /**
@@ -97,8 +144,12 @@ int main(void)
   MX_GPIO_Init();
   MX_DMA_Init();
   MX_ADC1_Init();
+  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
   HAL_ADCEx_Calibration_Start(&hadc1);
+
+  HAL_UARTEx_ReceiveToIdle_DMA(&huart1, RxBuf, RxBuf_SIZE);
+  __HAL_DMA_DISABLE_IT(&hdma_usart1_rx, DMA_IT_HT);
   /* USER CODE END 2 */
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -234,6 +285,39 @@ static void MX_ADC1_Init(void)
 }
 
 /**
+  * @brief USART1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART1_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART1_Init 0 */
+
+  /* USER CODE END USART1_Init 0 */
+
+  /* USER CODE BEGIN USART1_Init 1 */
+
+  /* USER CODE END USART1_Init 1 */
+  huart1.Instance = USART1;
+  huart1.Init.BaudRate = 9600;
+  huart1.Init.WordLength = UART_WORDLENGTH_8B;
+  huart1.Init.StopBits = UART_STOPBITS_1;
+  huart1.Init.Parity = UART_PARITY_NONE;
+  huart1.Init.Mode = UART_MODE_TX_RX;
+  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART1_Init 2 */
+
+  /* USER CODE END USART1_Init 2 */
+
+}
+
+/**
   * Enable DMA controller clock
   */
 static void MX_DMA_Init(void)
@@ -246,6 +330,9 @@ static void MX_DMA_Init(void)
   /* DMA1_Channel1_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
+  /* DMA1_Channel5_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel5_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel5_IRQn);
 
 }
 

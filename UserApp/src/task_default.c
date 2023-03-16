@@ -24,4 +24,12 @@ void task_default_run(void)
 	{
 		DBG("ADC is at %lu : system should go into standby mode", analog_capture_Get_avg());
 	}
+
+	if(uart1RcvComplete){
+		for(int i=0; i<MainBuf_SIZE; i++){
+			printf("%c",MainBuf[i]);
+		}
+		DBG("");
+		uart1RcvComplete = true;
+	}
 }
