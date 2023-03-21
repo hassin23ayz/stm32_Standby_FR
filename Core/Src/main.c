@@ -47,7 +47,7 @@
 ADC_HandleTypeDef hadc1;
 DMA_HandleTypeDef hdma_adc1;
 
-volatile RTC_HandleTypeDef hrtc;
+RTC_HandleTypeDef hrtc;
 
 osThreadId defaultTaskHandle;
 /* USER CODE BEGIN PV */

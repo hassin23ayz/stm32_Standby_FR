@@ -6,11 +6,12 @@
 #include "debug.h"
 
 #include "analog_capture.h"
-
+#include "low_power_control.h"
 
 void task_default_init(void)
 {
 	DBG("%s", __func__);
+	low_power_standby_bootTime_check();
 	analog_capture_init();
 }
 
@@ -23,5 +24,7 @@ void task_default_run(void)
 	if(analog_capture_Get_avg() < 1024)
 	{
 		DBG("ADC is at %lu : system should go into standby mode", analog_capture_Get_avg());
+
+		low_power_standby_enter();
 	}
 }
